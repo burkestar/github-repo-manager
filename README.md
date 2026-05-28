@@ -16,7 +16,7 @@ A terminal UI for browsing and managing GitHub repositories across multiple orga
 
 - Rust (1.74+)
 - `libgit2` — on macOS: `brew install libgit2`
-- A GitHub personal access token (classic or fine-grained with repo read access)
+- A GitHub personal access token (see [Creating a GitHub token](#creating-a-github-token) below)
 
 ## Installation
 
@@ -52,7 +52,7 @@ layout = "nested"
 # Cron schedule for automatic git fetch of all local repos
 # Format: seconds minutes hours day-of-month month day-of-week
 # Default: daily at 5:00 AM
-cron_schedule = "0 0 5 * * * *"
+cron_schedule = "0 0 5 * * *"
 
 # GitHub organizations to browse
 organizations = [
@@ -62,6 +62,30 @@ organizations = [
 ]
 ```
 
+## Creating a GitHub token
+
+The app needs a token that can list repositories (including private ones) for each configured organization.
+
+### Classic token (recommended for org access)
+
+1. Go to **github.com/settings/tokens** → **Generate new token (classic)**
+2. Set a descriptive name (e.g. `github-repo-manager`)
+3. Select the **`repo`** scope — this gives read/write access to code and metadata for all repos you have access to, including private ones
+4. Click **Generate token** and copy the value into `config.toml`
+
+> **Fine-grained tokens:** Select **All repositories** (or specific repos) and enable the **Contents** (read) and **Metadata** (read) permissions. Note that some GitHub organizations disable fine-grained token access by policy, in which case a classic token is required.
+
+### SSO authorization (required for SAML-protected organizations)
+
+If an organization enforces SAML SSO, API calls will be rejected even with a valid `repo`-scoped token unless the token has been explicitly SSO-authorized for that org. Symptoms: other orgs work fine but one specific org returns an error.
+
+To authorize:
+
+1. Go to **github.com/settings/tokens**
+2. Find your token and click **Configure SSO**
+3. Click **Authorize** next to each organization that requires SSO
+4. Press `r` in the TUI to refresh the repo list
+
 ## Running
 
 ```bash
@@ -70,7 +94,7 @@ cargo run
 ./target/release/github-repo-manager
 ```
 
-Logs are written to `~/.cache/github-repo-manager/app.log` (never to the terminal).
+Logs are written to `~/.config/github-repo-manager/app.log` (never to the terminal).
 
 ## UI Overview
 
@@ -106,6 +130,7 @@ Logs are written to `~/.cache/github-repo-manager/app.log` (never to the termina
 | `Enter` | Clone selected repo (if not local); show local path (if already cloned) |
 | `f` | `git fetch` the selected repo |
 | `F` | `git fetch` all locally cloned repos |
+| `a` | Toggle visibility of archived repos |
 | `r` | Refresh repo list from GitHub API (bypasses cache) |
 | `q` | Quit |
 | `Ctrl+C` | Quit |
@@ -116,11 +141,13 @@ The app runs a background job on the configured cron schedule to `git fetch` all
 
 To test with a more frequent interval, temporarily change your config:
 ```toml
-cron_schedule = "*/15 * * * * * *"  # every 15 seconds
+cron_schedule = "*/15 * * * * *"  # every 15 seconds
 ```
 
 The status bar shows the last fetch time and a `[fetching…]` indicator while a batch fetch is running.
 
 ## Caching
 
-GitHub API responses are cached to disk at `~/.cache/github-repo-manager/<org>.json` and expire after 1 hour. Press `r` to force a refresh from the API for the current organization.
+GitHub API responses are cached to disk at `~/.config/github-repo-manager/<org>.json` and expire after 1 hour. Press `r` to force a refresh from the API for the current organization.
+
+The local workspace scan result is also cached at `~/.config/github-repo-manager/workspace_cache.json` and refreshed on startup and after every clone or fetch.
