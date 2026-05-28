@@ -32,7 +32,7 @@ fn default_workspace_root() -> PathBuf {
 }
 
 fn default_cron_schedule() -> String {
-    "0 0 5 * * * *".to_string()
+    "0 0 5 * * *".to_string()
 }
 
 fn default_organizations() -> Vec<String> {
@@ -53,7 +53,7 @@ impl Config {
                   github_token = \"ghp_your_token_here\"\n\
                   workspace_root = \"{}\"\n\
                   layout = \"nested\"\n\
-                  cron_schedule = \"0 0 5 * * * *\"\n\
+                  cron_schedule = \"0 0 5 * * *\"\n\
                   organizations = [\"datarobot\", \"datarobot-community\", \"datarobot-oss\"]",
                 config_path.display(),
                 default_workspace_root().display(),
@@ -69,10 +69,14 @@ impl Config {
         Ok(config)
     }
 
-    pub fn config_path() -> PathBuf {
-        dirs::config_dir()
+    pub fn config_dir() -> PathBuf {
+        dirs::home_dir()
             .unwrap_or_else(|| PathBuf::from("/tmp"))
+            .join(".config")
             .join("github-repo-manager")
-            .join("config.toml")
+    }
+
+    pub fn config_path() -> PathBuf {
+        Self::config_dir().join("config.toml")
     }
 }

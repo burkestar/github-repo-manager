@@ -61,7 +61,7 @@ pub fn render_title(frame: &mut Frame, area: Rect, _state: &AppState) {
                 .add_modifier(Modifier::BOLD),
         ),
         Span::styled(
-            " [Tab] switch  [/] search  [Enter] clone  [f] fetch  [F] fetch all  [r] refresh  [q] quit",
+            " [Tab] switch  [/] search  [Enter] clone  [f] fetch  [F] fetch all  [r] refresh  [a] toggle archived  [q] quit",
             Style::default().fg(Color::DarkGray),
         ),
     ]);

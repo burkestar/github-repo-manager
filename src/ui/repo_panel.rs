@@ -19,12 +19,13 @@ pub fn render(frame: &mut Frame, area: Rect, state: &mut AppState) {
     let total = state.current_repos().len();
     let filtered = state.filtered_repos.len();
 
+    let archived_note = if !state.show_archived { " [archived hidden]" } else { "" };
     let title = if is_loading {
         format!(" {org} — loading… ")
     } else if state.search_active && !state.search_query.is_empty() {
-        format!(" {org} — {filtered}/{total} repos ")
+        format!(" {org} — {filtered}/{total} repos{archived_note} ")
     } else {
-        format!(" {org} — {total} repos ")
+        format!(" {org} — {filtered} repos{archived_note} ")
     };
 
     let outer_block = Block::default()

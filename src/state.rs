@@ -20,7 +20,7 @@ pub struct RepoInfo {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CheckoutInfo {
     pub local_path: PathBuf,
     pub current_branch: Option<String>,
@@ -72,6 +72,7 @@ pub struct AppState {
     pub status_message: Option<(String, StatusLevel, Instant)>,
     pub last_fetch_time: Option<DateTime<Local>>,
     pub batch_fetching: bool,
+    pub show_archived: bool,
     pub should_quit: bool,
 }
 
@@ -99,6 +100,7 @@ impl AppState {
             status_message: None,
             last_fetch_time: None,
             batch_fetching: false,
+            show_archived: true,
             should_quit: false,
         }
     }

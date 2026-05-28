@@ -3,8 +3,25 @@ use std::path::{Path, PathBuf};
 
 use tracing::{debug, warn};
 
-use crate::config::WorkspaceLayout;
+use crate::config::{Config, WorkspaceLayout};
 use crate::state::CheckoutInfo;
+
+pub fn load_workspace_cache() -> HashMap<String, CheckoutInfo> {
+    let path = Config::config_dir().join("workspace_cache.json");
+    std::fs::read_to_string(&path)
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_default()
+}
+
+pub fn save_workspace_cache(checked_out: &HashMap<String, CheckoutInfo>) {
+    let dir = Config::config_dir();
+    let _ = std::fs::create_dir_all(&dir);
+    let path = dir.join("workspace_cache.json");
+    if let Ok(json) = serde_json::to_string(checked_out) {
+        let _ = std::fs::write(path, json);
+    }
+}
 
 pub fn scan_workspace(root: &Path, layout: &WorkspaceLayout) -> HashMap<String, CheckoutInfo> {
     let mut result = HashMap::new();
@@ -98,13 +115,25 @@ fn infer_full_name(repo: &git2::Repository, fallback_path: &Path) -> Option<Stri
 
 fn extract_full_name_from_url(url: &str) -> Option<String> {
     let url = url.trim_end_matches('/').trim_end_matches(".git");
-    if url.contains("github.com") {
-        let parts: Vec<&str> = url.split('/').collect();
-        if parts.len() >= 2 {
-            let org = parts[parts.len() - 2];
-            let repo = parts[parts.len() - 1];
-            return Some(format!("{org}/{repo}"));
+    if !url.contains("github.com") {
+        return None;
+    }
+    // SSH: git@github.com:org/repo
+    if url.starts_with("git@") {
+        if let Some(path) = url.splitn(2, ':').nth(1) {
+            let parts: Vec<&str> = path.splitn(2, '/').collect();
+            if parts.len() == 2 {
+                return Some(format!("{}/{}", parts[0], parts[1]));
+            }
         }
+        return None;
+    }
+    // HTTPS: https://github.com/org/repo
+    let parts: Vec<&str> = url.split('/').collect();
+    if parts.len() >= 2 {
+        let org = parts[parts.len() - 2];
+        let repo = parts[parts.len() - 1];
+        return Some(format!("{org}/{repo}"));
     }
     None
 }

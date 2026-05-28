@@ -6,6 +6,7 @@ use lru::LruCache;
 use serde::{Deserialize, Serialize};
 use std::num::NonZeroUsize;
 
+use crate::config::Config;
 use crate::state::RepoInfo;
 
 const CACHE_TTL_SECS: u64 = 3600;
@@ -23,9 +24,7 @@ pub struct RepoCache {
 
 impl RepoCache {
     pub fn new() -> Self {
-        let cache_dir = dirs::cache_dir()
-            .unwrap_or_else(|| PathBuf::from("/tmp"))
-            .join("github-repo-manager");
+        let cache_dir = Config::config_dir();
         let _ = std::fs::create_dir_all(&cache_dir);
         Self {
             cache_dir,

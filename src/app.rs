@@ -10,7 +10,7 @@ use tracing::{error, info};
 use crate::config::Config;
 use crate::error::Result;
 use crate::events::AppEvent;
-use crate::git::workspace::{repo_target_path, scan_workspace};
+use crate::git::workspace::{load_workspace_cache, repo_target_path, save_workspace_cache, scan_workspace};
 use crate::github::cache::RepoCache;
 use crate::github::client::fetch_org_repos;
 use crate::scheduler::start_scheduler;
@@ -38,9 +38,13 @@ impl App {
     }
 
     pub async fn run(mut self, mut terminal: ratatui::DefaultTerminal) -> Result<()> {
-        self.state.checked_out =
-            scan_workspace(&self.state.config.workspace_root, &self.state.config.layout);
-        info!("Found {} checked-out repos", self.state.checked_out.len());
+        self.state.checked_out = load_workspace_cache();
+        info!("Loaded {} repos from workspace cache", self.state.checked_out.len());
+
+        let fresh = scan_workspace(&self.state.config.workspace_root, &self.state.config.layout);
+        info!("Found {} checked-out repos after scan", fresh.len());
+        self.state.checked_out = fresh;
+        save_workspace_cache(&self.state.checked_out);
 
         self.load_repos_for_current_org();
 
@@ -108,16 +112,24 @@ impl App {
     fn update_filtered_repos(&mut self) {
         let org = self.state.current_org().to_string();
         let repos = self.state.repos.get(&org).cloned().unwrap_or_default();
+        let show_archived = self.state.show_archived;
+
+        let visible: Vec<usize> = (0..repos.len())
+            .filter(|&i| show_archived || !repos[i].archived)
+            .collect();
 
         if self.state.search_query.is_empty() {
-            self.state.filtered_repos = (0..repos.len()).collect();
+            self.state.filtered_repos = visible;
         } else {
             let matcher = SkimMatcherV2::default();
-            let query = self.state.search_query.clone();
-            let mut scored: Vec<(usize, i64)> = repos
-                .iter()
-                .enumerate()
-                .filter_map(|(i, r)| matcher.fuzzy_match(&r.name, &query).map(|score| (i, score)))
+            let query = self.state.search_query.to_lowercase();
+            let mut scored: Vec<(usize, i64)> = visible
+                .into_iter()
+                .filter_map(|i| {
+                    matcher
+                        .fuzzy_match(&repos[i].name.to_lowercase(), &query)
+                        .map(|score| (i, score))
+                })
                 .collect();
             scored.sort_by(|a, b| b.1.cmp(&a.1));
             self.state.filtered_repos = scored.into_iter().map(|(i, _)| i).collect();
@@ -177,6 +189,17 @@ impl App {
             }
             KeyCode::Char('F') => self.trigger_batch_fetch(),
             KeyCode::Char('f') => self.trigger_single_fetch(),
+
+            KeyCode::Char('a') => {
+                self.state.show_archived = !self.state.show_archived;
+                self.update_filtered_repos();
+                let msg = if self.state.show_archived {
+                    "Showing archived repos"
+                } else {
+                    "Hiding archived repos"
+                };
+                self.state.set_status(msg, StatusLevel::Info);
+            }
 
             KeyCode::Char('r') => {
                 let org = self.state.current_org().to_string();
@@ -324,6 +347,20 @@ impl App {
             &self.state.config.layout,
             &repo.full_name,
         );
+
+        if target.join(".git").exists() {
+            if let Some(dialog) = &mut self.state.clone_dialog {
+                dialog.stage = CloneStage::Done(target.clone());
+            }
+            self.state.set_status(
+                format!("{} already checked out at {}", repo.full_name, target.display()),
+                StatusLevel::Info,
+            );
+            self.state.checked_out =
+                scan_workspace(&self.state.config.workspace_root, &self.state.config.layout);
+            save_workspace_cache(&self.state.checked_out);
+            return;
+        }
 
         if let Some(parent) = target.parent() {
             if let Err(e) = std::fs::create_dir_all(parent) {
@@ -477,8 +514,15 @@ impl App {
 
             AppEvent::ReposFailed { org, error } => {
                 self.state.repos_loading.remove(&org);
-                self.state
-                    .set_status(format!("GitHub error: {error}"), StatusLevel::Error);
+                let display = if error.contains("SAML")
+                    || error.contains("enforcement")
+                    || error.contains("API error: GitHub")
+                {
+                    format!("SSO auth required for '{org}': authorize token at github.com/settings/tokens → Configure SSO")
+                } else {
+                    format!("GitHub error ({org}): {error}")
+                };
+                self.state.set_status(display, StatusLevel::Error);
                 error!("Failed to load repos for {}: {}", org, error);
             }
 
@@ -500,6 +544,7 @@ impl App {
                     .set_status(format!("Cloned {repo}"), StatusLevel::Success);
                 self.state.checked_out =
                     scan_workspace(&self.state.config.workspace_root, &self.state.config.layout);
+                save_workspace_cache(&self.state.checked_out);
                 info!("Clone complete: {} → {}", repo, path.display());
             }
 
@@ -519,6 +564,7 @@ impl App {
                     .set_status(format!("Fetched {repo}"), StatusLevel::Success);
                 self.state.checked_out =
                     scan_workspace(&self.state.config.workspace_root, &self.state.config.layout);
+                save_workspace_cache(&self.state.checked_out);
             }
 
             AppEvent::FetchFailed { repo, error } => {
@@ -540,6 +586,7 @@ impl App {
                 self.state.last_fetch_time = Some(chrono::Local::now());
                 self.state.checked_out =
                     scan_workspace(&self.state.config.workspace_root, &self.state.config.layout);
+                save_workspace_cache(&self.state.checked_out);
                 let msg = if failed == 0 {
                     format!("Fetched {fetched} repos")
                 } else {
