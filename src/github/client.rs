@@ -1,7 +1,7 @@
 use serde::Serialize;
 use tracing::{info, warn};
 
-use crate::error::Result;
+use crate::error::{AppError, Result};
 use crate::state::RepoInfo;
 
 #[derive(Serialize)]
@@ -19,6 +19,7 @@ pub async fn fetch_org_repos(org: &str, token: &str) -> Result<Vec<RepoInfo>> {
 
     let mut all_repos = Vec::new();
     let mut page = 1u32;
+    let mut use_user_route = false;
 
     loop {
         let query = ListReposQuery {
@@ -26,23 +27,31 @@ pub async fn fetch_org_repos(org: &str, token: &str) -> Result<Vec<RepoInfo>> {
             per_page: 100,
             page,
         };
-        let items: Vec<octocrab::models::Repository> = crab
-            .get(format!("/orgs/{org}/repos"), Some(&query))
-            .await
-            .map_err(|e| {
-                let msg = e.to_string();
-                if msg.contains("SAML")
-                    || msg.contains("enforcement")
-                    || msg.contains("GitHub")
-                {
-                    // Log the raw error so we can diagnose the exact message
-                    warn!("org={org} page={page} raw error: {e:?}");
+        let route = if use_user_route {
+            format!("/users/{org}/repos")
+        } else {
+            format!("/orgs/{org}/repos")
+        };
+
+        let result: std::result::Result<Vec<octocrab::models::Repository>, octocrab::Error> =
+            crab.get(&route, Some(&query)).await;
+
+        let items = match result {
+            Ok(items) => items,
+            Err(e) => {
+                let gh_message = github_error_message(&e);
+                if !use_user_route && gh_message == "Not Found" {
+                    info!("'{}' is not an org, retrying as user account", org);
+                    use_user_route = true;
+                    continue;
                 }
-                e
-            })?;
+                warn!("org={org} page={page} error: {gh_message}");
+                return Err(AppError::Config(format!("GitHub API error: {gh_message}")));
+            }
+        };
 
         let count = items.len();
-        info!("org={} page={} count={}", org, page, count);
+        info!("org={} page={} count={} via={}", org, page, count, if use_user_route { "user" } else { "org" });
 
         for repo in items {
             all_repos.push(RepoInfo {
@@ -77,4 +86,11 @@ pub async fn fetch_org_repos(org: &str, token: &str) -> Result<Vec<RepoInfo>> {
     }
 
     Ok(all_repos)
+}
+
+fn github_error_message(e: &octocrab::Error) -> String {
+    match e {
+        octocrab::Error::GitHub { source, .. } => source.message.clone(),
+        _ => format!("{e:?}"),
+    }
 }

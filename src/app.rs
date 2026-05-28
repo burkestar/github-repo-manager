@@ -619,10 +619,7 @@ impl App {
 
             AppEvent::ReposFailed { org, error } => {
                 self.state.repos_loading.remove(&org);
-                let full_msg = if error.contains("SAML")
-                    || error.contains("enforcement")
-                    || error.contains("API error: GitHub")
-                {
+                let full_msg = if error.contains("SAML") || error.contains("enforcement") {
                     format!(
                         "SSO authorization required for '{org}'.\n\n\
                          Your token is valid but has not been authorized for this organization's SAML SSO.\n\n\
