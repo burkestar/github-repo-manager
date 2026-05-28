@@ -114,8 +114,8 @@ impl AppState {
             last_fetch_time: None,
             batch_fetching: false,
             show_archived: true,
-            sort_field: SortField::Name,
-            sort_order: SortOrder::Asc,
+            sort_field: SortField::UpdatedAt,
+            sort_order: SortOrder::Desc,
             error_popup: None,
             should_quit: false,
         }
