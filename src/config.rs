@@ -15,6 +15,10 @@ pub struct Config {
     pub cron_schedule: String,
     #[serde(default = "default_organizations")]
     pub organizations: Vec<String>,
+    /// Terminal app to open with [t]. macOS: app name passed to `open -a`.
+    /// Linux: binary name, invoked with `--working-directory`.
+    /// Defaults: "Terminal" on macOS, "x-terminal-emulator" on Linux.
+    pub terminal: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]

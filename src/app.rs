@@ -227,6 +227,27 @@ impl App {
                 self.state.set_status(msg, StatusLevel::Info);
             }
 
+            KeyCode::Char('t') => {
+                if let Some(repo) = self.state.selected_repo().cloned() {
+                    match self.state.checked_out.get(&repo.full_name.to_lowercase()).cloned() {
+                        None => self.state.set_status(
+                            "Repo is not checked out locally",
+                            StatusLevel::Info,
+                        ),
+                        Some(checkout) => match open_terminal(&checkout.local_path, self.state.config.terminal.as_deref()) {
+                            Ok(()) => self.state.set_status(
+                                format!("Opening terminal at {}", checkout.local_path.display()),
+                                StatusLevel::Info,
+                            ),
+                            Err(e) => self.state.set_status(
+                                format!("Failed to open terminal: {e}"),
+                                StatusLevel::Error,
+                            ),
+                        },
+                    }
+                }
+            }
+
             KeyCode::Char('o') => {
                 if let Some(repo) = self.state.selected_repo().cloned() {
                     let url = format!("https://github.com/{}", repo.full_name);
@@ -736,6 +757,33 @@ impl App {
             }
         }
     }
+}
+
+fn open_terminal(path: &std::path::Path, configured: Option<&str>) -> std::io::Result<()> {
+    match std::env::consts::OS {
+        "macos" => {
+            let app = configured.unwrap_or("Terminal");
+            std::process::Command::new("open")
+                .args(["-a", app])
+                .arg(path)
+                .spawn()?;
+        }
+        "linux" => {
+            let default = std::env::var("TERMINAL").unwrap_or_else(|_| "x-terminal-emulator".into());
+            let term = configured.unwrap_or(&default);
+            std::process::Command::new(term)
+                .arg("--working-directory")
+                .arg(path)
+                .spawn()?;
+        }
+        os => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Unsupported,
+                format!("unsupported OS: {os}"),
+            ))
+        }
+    }
+    Ok(())
 }
 
 fn open_browser(url: &str) -> std::io::Result<()> {
