@@ -20,7 +20,6 @@ pub fn render(frame: &mut Frame, state: &CloneDialogState) {
 
     match &state.stage {
         CloneStage::Cloning { progress } => render_progress(frame, inner, state, *progress),
-        CloneStage::Done(path) => render_done(frame, inner, path.display().to_string()),
         CloneStage::Failed(err) => render_error(frame, inner, err),
     }
 }
@@ -56,21 +55,6 @@ fn render_progress(frame: &mut Frame, area: Rect, state: &CloneDialogState, prog
     frame.render_widget(gauge, gauge_area);
 }
 
-fn render_done(frame: &mut Frame, area: Rect, path: String) {
-    let lines = vec![
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("  ✓ Cloned to ", Style::default().fg(Color::Green)),
-            Span::styled(path, Style::default().fg(Color::Cyan)),
-        ]),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("  [Enter/Esc] ", Style::default().fg(Color::DarkGray)),
-            Span::raw("close"),
-        ]),
-    ];
-    frame.render_widget(Paragraph::new(lines), area);
-}
 
 fn render_error(frame: &mut Frame, area: Rect, err: &str) {
     let [msg_area, footer_area] = Layout::vertical([

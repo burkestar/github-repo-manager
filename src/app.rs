@@ -341,12 +341,12 @@ impl App {
         let stage = self.state.clone_dialog.as_ref().map(|d| d.stage.clone());
 
         match stage {
-            Some(CloneStage::Done(_)) | Some(CloneStage::Failed(_)) => {
+            Some(CloneStage::Failed(_)) => {
                 if key.code == KeyCode::Esc || key.code == KeyCode::Enter {
                     self.state.clone_dialog = None;
                 }
             }
-            // Cloning in progress — Esc cancels the dialog display but clone continues
+            // Cloning in progress — Esc dismisses the dialog but the clone continues
             _ => {
                 if key.code == KeyCode::Esc {
                     self.state.clone_dialog = None;
@@ -394,9 +394,7 @@ impl App {
         );
 
         if target.join(".git").exists() {
-            if let Some(dialog) = &mut self.state.clone_dialog {
-                dialog.stage = CloneStage::Done(target.clone());
-            }
+            self.state.clone_dialog = None;
             self.state.set_status(
                 format!("{} already checked out at {}", repo.full_name, target.display()),
                 StatusLevel::Info,
@@ -640,11 +638,7 @@ impl App {
             }
 
             AppEvent::CloneCompleted { repo, path } => {
-                if let Some(dialog) = &mut self.state.clone_dialog {
-                    if dialog.repo.full_name == repo {
-                        dialog.stage = CloneStage::Done(path.clone());
-                    }
-                }
+                self.state.clone_dialog = None;
                 self.state
                     .set_status(format!("Cloned {repo}"), StatusLevel::Success);
                 self.state.checked_out =

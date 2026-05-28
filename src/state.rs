@@ -56,7 +56,6 @@ pub enum SortOrder {
 #[derive(Debug, Clone, PartialEq)]
 pub enum CloneStage {
     Cloning { progress: f64 },
-    Done(PathBuf),
     Failed(String),
 }
 
