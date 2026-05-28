@@ -227,6 +227,16 @@ impl App {
                 self.state.set_status(msg, StatusLevel::Info);
             }
 
+            KeyCode::Char('o') => {
+                if let Some(repo) = self.state.selected_repo().cloned() {
+                    let url = format!("https://github.com/{}", repo.full_name);
+                    match open_browser(&url) {
+                        Ok(()) => self.state.set_status(format!("Opening {url}…"), StatusLevel::Info),
+                        Err(e) => self.state.set_status(format!("Failed to open browser: {e}"), StatusLevel::Error),
+                    }
+                }
+            }
+
             KeyCode::Char('d') => {
                 if let Some(repo) = self.state.selected_repo().cloned() {
                     let body = repo
@@ -726,6 +736,19 @@ impl App {
             }
         }
     }
+}
+
+fn open_browser(url: &str) -> std::io::Result<()> {
+    let browser = match std::env::consts::OS {
+        "macos" => "open",
+        "linux" => "xdg-open",
+        os => return Err(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            format!("unsupported OS: {os}"),
+        )),
+    };
+    std::process::Command::new(browser).arg(url).spawn()?;
+    Ok(())
 }
 
 impl Drop for App {
