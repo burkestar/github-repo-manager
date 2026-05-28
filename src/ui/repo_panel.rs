@@ -4,7 +4,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph};
 use ratatui::Frame;
 
-use crate::state::{AppState, PanelFocus};
+use crate::state::{AppState, PanelFocus, SortField, SortOrder};
 
 pub fn render(frame: &mut Frame, area: Rect, state: &mut AppState) {
     let focused = state.focus == PanelFocus::RepoPanel;
@@ -20,12 +20,18 @@ pub fn render(frame: &mut Frame, area: Rect, state: &mut AppState) {
     let filtered = state.filtered_repos.len();
 
     let archived_note = if !state.show_archived { " [archived hidden]" } else { "" };
+    let sort_indicator = match (&state.sort_field, &state.sort_order) {
+        (SortField::Name, SortOrder::Asc) => " ↑name",
+        (SortField::Name, SortOrder::Desc) => " ↓name",
+        (SortField::UpdatedAt, SortOrder::Asc) => " ↑updated",
+        (SortField::UpdatedAt, SortOrder::Desc) => " ↓updated",
+    };
     let title = if is_loading {
         format!(" {org} — loading… ")
     } else if state.search_active && !state.search_query.is_empty() {
         format!(" {org} — {filtered}/{total} repos{archived_note} ")
     } else {
-        format!(" {org} — {filtered} repos{archived_note} ")
+        format!(" {org} — {filtered} repos{sort_indicator}{archived_note} ")
     };
 
     let outer_block = Block::default()
@@ -56,7 +62,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &mut AppState) {
         .iter()
         .filter_map(|&idx| repos.get(idx))
         .map(|repo| {
-            if let Some(info) = checked_out.get(&repo.full_name) {
+            if let Some(info) = checked_out.get(&repo.full_name.to_lowercase()) {
                 let branch = info.current_branch.as_deref().unwrap_or("?");
                 let ahead_behind = if info.ahead > 0 || info.behind > 0 {
                     format!(" ↑{} ↓{}", info.ahead, info.behind)

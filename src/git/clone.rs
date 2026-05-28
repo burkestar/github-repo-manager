@@ -13,8 +13,12 @@ pub fn clone_repo(
     let mut callbacks = git2::RemoteCallbacks::new();
 
     let token_owned = token.to_string();
-    callbacks.credentials(move |_url, _username, _allowed| {
-        git2::Cred::userpass_plaintext("oauth2", &token_owned)
+    callbacks.credentials(move |_url, username, allowed| {
+        if allowed.contains(git2::CredentialType::SSH_KEY) {
+            git2::Cred::ssh_key_from_agent(username.unwrap_or("git"))
+        } else {
+            git2::Cred::userpass_plaintext("oauth2", &token_owned)
+        }
     });
 
     callbacks.transfer_progress(move |stats| {

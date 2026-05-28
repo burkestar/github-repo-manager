@@ -48,7 +48,7 @@ fn scan_dir(
     let git_dir = dir.join(".git");
     if git_dir.exists() {
         if let Some(info) = read_checkout_info(dir) {
-            result.insert(info.0, info.1);
+            result.insert(info.0.to_lowercase(), info.1);
         }
         return;
     }

@@ -42,8 +42,19 @@ pub enum StatusLevel {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum SortField {
+    Name,
+    UpdatedAt,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum SortOrder {
+    Asc,
+    Desc,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum CloneStage {
-    Confirm,
     Cloning { progress: f64 },
     Done(PathBuf),
     Failed(String),
@@ -73,6 +84,9 @@ pub struct AppState {
     pub last_fetch_time: Option<DateTime<Local>>,
     pub batch_fetching: bool,
     pub show_archived: bool,
+    pub sort_field: SortField,
+    pub sort_order: SortOrder,
+    pub error_popup: Option<String>,
     pub should_quit: bool,
 }
 
@@ -101,6 +115,9 @@ impl AppState {
             last_fetch_time: None,
             batch_fetching: false,
             show_archived: true,
+            sort_field: SortField::Name,
+            sort_order: SortOrder::Asc,
+            error_popup: None,
             should_quit: false,
         }
     }

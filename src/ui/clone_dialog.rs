@@ -1,7 +1,7 @@
 use ratatui::layout::{Constraint, Flex, Layout, Rect};
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::style::{Color, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, Clear, Gauge, Paragraph};
+use ratatui::widgets::{Block, Borders, Clear, Gauge, Paragraph, Wrap};
 use ratatui::Frame;
 
 use crate::state::{CloneDialogState, CloneStage};
@@ -19,36 +19,10 @@ pub fn render(frame: &mut Frame, state: &CloneDialogState) {
     frame.render_widget(block, area);
 
     match &state.stage {
-        CloneStage::Confirm => render_confirm(frame, inner, state),
         CloneStage::Cloning { progress } => render_progress(frame, inner, state, *progress),
         CloneStage::Done(path) => render_done(frame, inner, path.display().to_string()),
         CloneStage::Failed(err) => render_error(frame, inner, err),
     }
-}
-
-fn render_confirm(frame: &mut Frame, area: Rect, state: &CloneDialogState) {
-    let repo = &state.repo;
-    let lines = vec![
-        Line::from(""),
-        Line::from(vec![
-            Span::raw("  Clone "),
-            Span::styled(
-                &repo.full_name,
-                Style::default()
-                    .fg(Color::Cyan)
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::raw(" ?"),
-        ]),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("  [Enter] ", Style::default().fg(Color::Green)),
-            Span::raw("confirm   "),
-            Span::styled("  [Esc] ", Style::default().fg(Color::Red)),
-            Span::raw("cancel"),
-        ]),
-    ];
-    frame.render_widget(Paragraph::new(lines), area);
 }
 
 fn render_progress(frame: &mut Frame, area: Rect, state: &CloneDialogState, progress: f64) {
@@ -91,7 +65,7 @@ fn render_done(frame: &mut Frame, area: Rect, path: String) {
         ]),
         Line::from(""),
         Line::from(vec![
-            Span::styled("  [Esc] ", Style::default().fg(Color::DarkGray)),
+            Span::styled("  [Enter/Esc] ", Style::default().fg(Color::DarkGray)),
             Span::raw("close"),
         ]),
     ];
@@ -99,19 +73,23 @@ fn render_done(frame: &mut Frame, area: Rect, path: String) {
 }
 
 fn render_error(frame: &mut Frame, area: Rect, err: &str) {
-    let lines = vec![
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("  ✗ Error: ", Style::default().fg(Color::Red)),
-            Span::raw(err),
-        ]),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("  [Esc] ", Style::default().fg(Color::DarkGray)),
-            Span::raw("close"),
-        ]),
-    ];
-    frame.render_widget(Paragraph::new(lines), area);
+    let [msg_area, footer_area] = Layout::vertical([
+        Constraint::Fill(1),
+        Constraint::Length(1),
+    ])
+    .areas(area);
+
+    let text = format!("  ✗ {err}");
+    let para = Paragraph::new(text)
+        .style(Style::default().fg(Color::Red))
+        .wrap(Wrap { trim: false });
+    frame.render_widget(para, msg_area);
+
+    let footer = Line::from(vec![
+        Span::styled("  [Enter/Esc] ", Style::default().fg(Color::DarkGray)),
+        Span::raw("close"),
+    ]);
+    frame.render_widget(Paragraph::new(footer), footer_area);
 }
 
 fn centered_rect(percent_x: u16, height: u16, area: Rect) -> Rect {

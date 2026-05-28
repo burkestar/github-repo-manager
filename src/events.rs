@@ -11,6 +11,8 @@ pub enum AppEvent {
     CloneFailed { repo: String, error: String },
     FetchCompleted { repo: String },
     FetchFailed { repo: String, error: String },
+    UpMainCompleted { repo: String, message: String },
+    UpMainFailed { repo: String, error: String },
     BatchFetchStarted,
     BatchFetchCompleted { fetched: usize, failed: usize },
 }

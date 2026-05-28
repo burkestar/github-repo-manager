@@ -14,7 +14,7 @@ use crate::git::workspace::{load_workspace_cache, repo_target_path, save_workspa
 use crate::github::cache::RepoCache;
 use crate::github::client::fetch_org_repos;
 use crate::scheduler::start_scheduler;
-use crate::state::{AppState, CloneDialogState, CloneStage, PanelFocus, StatusLevel};
+use crate::state::{AppState, CloneDialogState, CloneStage, PanelFocus, SortField, SortOrder, StatusLevel};
 use crate::ui;
 
 pub struct App {
@@ -114,11 +114,26 @@ impl App {
         let repos = self.state.repos.get(&org).cloned().unwrap_or_default();
         let show_archived = self.state.show_archived;
 
-        let visible: Vec<usize> = (0..repos.len())
+        let mut visible: Vec<usize> = (0..repos.len())
             .filter(|&i| show_archived || !repos[i].archived)
             .collect();
 
         if self.state.search_query.is_empty() {
+            match self.state.sort_field {
+                SortField::Name => {
+                    // repos are already stored name-asc from the API
+                    if self.state.sort_order == SortOrder::Desc {
+                        visible.reverse();
+                    }
+                }
+                SortField::UpdatedAt => {
+                    if self.state.sort_order == SortOrder::Asc {
+                        visible.sort_by(|&a, &b| repos[a].updated_at.cmp(&repos[b].updated_at));
+                    } else {
+                        visible.sort_by(|&a, &b| repos[b].updated_at.cmp(&repos[a].updated_at));
+                    }
+                }
+            }
             self.state.filtered_repos = visible;
         } else {
             let matcher = SkimMatcherV2::default();
@@ -149,6 +164,12 @@ impl App {
             // Quit
             if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
                 self.state.should_quit = true;
+                return;
+            }
+
+            // Error popup intercepts all keys
+            if self.state.error_popup.is_some() {
+                self.state.error_popup = None;
                 return;
             }
 
@@ -189,6 +210,7 @@ impl App {
             }
             KeyCode::Char('F') => self.trigger_batch_fetch(),
             KeyCode::Char('f') => self.trigger_single_fetch(),
+            KeyCode::Char('m') => self.trigger_upmain(),
 
             KeyCode::Char('a') => {
                 self.state.show_archived = !self.state.show_archived;
@@ -197,6 +219,32 @@ impl App {
                     "Showing archived repos"
                 } else {
                     "Hiding archived repos"
+                };
+                self.state.set_status(msg, StatusLevel::Info);
+            }
+
+            KeyCode::Char('s') => {
+                self.state.sort_field = match self.state.sort_field {
+                    SortField::Name => SortField::UpdatedAt,
+                    SortField::UpdatedAt => SortField::Name,
+                };
+                self.update_filtered_repos();
+                let msg = match self.state.sort_field {
+                    SortField::Name => "Sorting by name",
+                    SortField::UpdatedAt => "Sorting by last updated",
+                };
+                self.state.set_status(msg, StatusLevel::Info);
+            }
+
+            KeyCode::Char('S') => {
+                self.state.sort_order = match self.state.sort_order {
+                    SortOrder::Asc => SortOrder::Desc,
+                    SortOrder::Desc => SortOrder::Asc,
+                };
+                self.update_filtered_repos();
+                let msg = match self.state.sort_order {
+                    SortOrder::Asc => "Sort order: ascending",
+                    SortOrder::Desc => "Sort order: descending",
                 };
                 self.state.set_status(msg, StatusLevel::Info);
             }
@@ -270,8 +318,8 @@ impl App {
             }
             PanelFocus::RepoPanel => {
                 if let Some(repo) = self.state.selected_repo().cloned() {
-                    if self.state.checked_out.contains_key(&repo.full_name) {
-                        let path = self.state.checked_out[&repo.full_name]
+                    if self.state.checked_out.contains_key(&repo.full_name.to_lowercase()) {
+                        let path = self.state.checked_out[&repo.full_name.to_lowercase()]
                             .local_path
                             .display()
                             .to_string();
@@ -280,8 +328,9 @@ impl App {
                     } else {
                         self.state.clone_dialog = Some(CloneDialogState {
                             repo,
-                            stage: CloneStage::Confirm,
+                            stage: CloneStage::Cloning { progress: 0.0 },
                         });
+                        self.start_clone();
                     }
                 }
             }
@@ -292,16 +341,12 @@ impl App {
         let stage = self.state.clone_dialog.as_ref().map(|d| d.stage.clone());
 
         match stage {
-            Some(CloneStage::Confirm) => match key.code {
-                KeyCode::Enter => self.start_clone(),
-                KeyCode::Esc => self.state.clone_dialog = None,
-                _ => {}
-            },
             Some(CloneStage::Done(_)) | Some(CloneStage::Failed(_)) => {
                 if key.code == KeyCode::Esc || key.code == KeyCode::Enter {
                     self.state.clone_dialog = None;
                 }
             }
+            // Cloning in progress — Esc cancels the dialog display but clone continues
             _ => {
                 if key.code == KeyCode::Esc {
                     self.state.clone_dialog = None;
@@ -428,7 +473,7 @@ impl App {
             Some(r) => r,
             None => return,
         };
-        let checkout = match self.state.checked_out.get(&repo.full_name).cloned() {
+        let checkout = match self.state.checked_out.get(&repo.full_name.to_lowercase()).cloned() {
             Some(c) => c,
             None => {
                 self.state
@@ -466,6 +511,54 @@ impl App {
 
         self.state
             .set_status(format!("Fetching {}…", repo.name), StatusLevel::Info);
+    }
+
+    fn trigger_upmain(&mut self) {
+        let repo = match self.state.selected_repo().cloned() {
+            Some(r) => r,
+            None => return,
+        };
+        let checkout = match self.state.checked_out.get(&repo.full_name.to_lowercase()).cloned() {
+            Some(c) => c,
+            None => {
+                self.state
+                    .set_status("Repo is not checked out locally", StatusLevel::Info);
+                return;
+            }
+        };
+
+        let path = checkout.local_path.clone();
+        let token = self.state.config.github_token.clone();
+        let tx = self.event_tx.clone();
+        let repo_name = repo.full_name.clone();
+        let default_branch = repo.default_branch.clone();
+
+        tokio::spawn(async move {
+            let result = tokio::task::spawn_blocking(move || {
+                crate::git::upmain::upmain(&path, &token, &default_branch)
+            })
+            .await;
+            match result {
+                Ok(Ok(msg)) => {
+                    let _ = tx.send(AppEvent::UpMainCompleted { repo: repo_name, message: msg });
+                }
+                Ok(Err(e)) => {
+                    let _ = tx.send(AppEvent::UpMainFailed {
+                        repo: repo_name,
+                        error: e.to_string(),
+                    });
+                }
+                Err(e) => {
+                    let _ = tx.send(AppEvent::UpMainFailed {
+                        repo: repo_name,
+                        error: e.to_string(),
+                    });
+                }
+            }
+        });
+
+        self.state
+            .set_status(format!("Updating {}…", repo.name), StatusLevel::Info);
     }
 
     fn trigger_batch_fetch(&mut self) {
@@ -514,15 +607,27 @@ impl App {
 
             AppEvent::ReposFailed { org, error } => {
                 self.state.repos_loading.remove(&org);
-                let display = if error.contains("SAML")
+                let full_msg = if error.contains("SAML")
                     || error.contains("enforcement")
                     || error.contains("API error: GitHub")
                 {
-                    format!("SSO auth required for '{org}': authorize token at github.com/settings/tokens → Configure SSO")
+                    format!(
+                        "SSO authorization required for '{org}'.\n\n\
+                         Your token is valid but has not been authorized for this organization's SAML SSO.\n\n\
+                         To fix:\n\
+                         1. Go to github.com/settings/tokens\n\
+                         2. Click your token → Configure SSO\n\
+                         3. Click Authorize next to '{org}'\n\
+                         4. Press [r] to refresh"
+                    )
                 } else {
-                    format!("GitHub error ({org}): {error}")
+                    format!("GitHub API error for '{org}':\n\n{error}")
                 };
-                self.state.set_status(display, StatusLevel::Error);
+                self.state.set_status(
+                    format!("GitHub error ({org}) — press any key for details"),
+                    StatusLevel::Error,
+                );
+                self.state.error_popup = Some(full_msg);
                 error!("Failed to load repos for {}: {}", org, error);
             }
 
@@ -573,6 +678,20 @@ impl App {
                     StatusLevel::Error,
                 );
                 error!("Fetch failed for {}: {}", repo, error);
+            }
+
+            AppEvent::UpMainCompleted { repo, message } => {
+                self.state.set_status(message, StatusLevel::Success);
+                self.state.checked_out =
+                    scan_workspace(&self.state.config.workspace_root, &self.state.config.layout);
+                save_workspace_cache(&self.state.checked_out);
+                info!("upmain complete for {}", repo);
+            }
+
+            AppEvent::UpMainFailed { repo, error } => {
+                self.state
+                    .set_status(format!("upmain failed for {repo}: {error}"), StatusLevel::Error);
+                error!("upmain failed for {}: {}", repo, error);
             }
 
             AppEvent::BatchFetchStarted => {

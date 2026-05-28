@@ -1,4 +1,5 @@
 pub mod clone_dialog;
+pub mod error_popup;
 pub mod layout;
 pub mod org_panel;
 pub mod repo_panel;
@@ -18,5 +19,9 @@ pub fn draw(frame: &mut Frame, state: &mut AppState) {
 
     if let Some(dialog) = &state.clone_dialog.clone() {
         clone_dialog::render(frame, dialog);
+    }
+
+    if let Some(msg) = &state.error_popup.clone() {
+        error_popup::render(frame, msg);
     }
 }
