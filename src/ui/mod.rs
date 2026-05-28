@@ -24,4 +24,8 @@ pub fn draw(frame: &mut Frame, state: &mut AppState) {
     if let Some(msg) = &state.error_popup.clone() {
         error_popup::render(frame, msg);
     }
+
+    if let Some((title, body)) = &state.info_popup.clone() {
+        error_popup::render_info(frame, title, body);
+    }
 }

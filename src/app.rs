@@ -167,9 +167,13 @@ impl App {
                 return;
             }
 
-            // Error popup intercepts all keys
+            // Popups intercept all keys
             if self.state.error_popup.is_some() {
                 self.state.error_popup = None;
+                return;
+            }
+            if self.state.info_popup.is_some() {
+                self.state.info_popup = None;
                 return;
             }
 
@@ -221,6 +225,16 @@ impl App {
                     "Hiding archived repos"
                 };
                 self.state.set_status(msg, StatusLevel::Info);
+            }
+
+            KeyCode::Char('d') => {
+                if let Some(repo) = self.state.selected_repo().cloned() {
+                    let body = repo
+                        .description
+                        .filter(|s| !s.is_empty())
+                        .unwrap_or_else(|| "No description available.".to_string());
+                    self.state.info_popup = Some((repo.full_name.clone(), body));
+                }
             }
 
             KeyCode::Char('s') => {

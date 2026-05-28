@@ -4,6 +4,34 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Clear, Paragraph, Wrap};
 use ratatui::Frame;
 
+pub fn render_info(frame: &mut Frame, title: &str, body: &str) {
+    let area = popup_rect(70, 16, frame.area());
+    frame.render_widget(Clear, area);
+
+    let block = Block::default()
+        .title(format!(" {title} "))
+        .title_style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Cyan));
+
+    let inner = block.inner(area);
+    frame.render_widget(block, area);
+
+    let [msg_area, footer_area] =
+        Layout::vertical([Constraint::Fill(1), Constraint::Length(1)]).areas(inner);
+
+    let para = Paragraph::new(format!(" {}", body.replace('\n', "\n ")))
+        .style(Style::default().fg(Color::White))
+        .wrap(Wrap { trim: false });
+    frame.render_widget(para, msg_area);
+
+    let footer = Line::from(vec![
+        Span::styled(" [any key] ", Style::default().fg(Color::DarkGray)),
+        Span::raw("close"),
+    ]);
+    frame.render_widget(Paragraph::new(footer), footer_area);
+}
+
 pub fn render(frame: &mut Frame, message: &str) {
     let area = popup_rect(70, 16, frame.area());
     frame.render_widget(Clear, area);

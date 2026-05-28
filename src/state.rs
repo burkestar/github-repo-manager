@@ -86,6 +86,7 @@ pub struct AppState {
     pub sort_field: SortField,
     pub sort_order: SortOrder,
     pub error_popup: Option<String>,
+    pub info_popup: Option<(String, String)>, // (title, body)
     pub should_quit: bool,
 }
 
@@ -117,6 +118,7 @@ impl AppState {
             sort_field: SortField::UpdatedAt,
             sort_order: SortOrder::Desc,
             error_popup: None,
+            info_popup: None,
             should_quit: false,
         }
     }
