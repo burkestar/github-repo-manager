@@ -118,19 +118,58 @@ Logs are written to `~/.config/github-repo-manager/app.log` (never to the termin
 
 ## Key Bindings
 
+### Navigation
+
 | Key | Action |
 |-----|--------|
 | `Tab` | Switch focus between Organizations and Repositories panels |
 | `h` / `l` | Move focus left (Orgs) / right (Repos) |
 | `j` / `↓` | Move selection down |
 | `k` / `↑` | Move selection up |
+| `Enter` | Switch to Repos panel (from Orgs); clone selected repo or show local path (from Repos) |
+
+### Search
+
+| Key | Action |
+|-----|--------|
 | `/` | Activate fuzzy search in the Repos panel |
-| `Esc` | Cancel search or close dialogs |
-| `Enter` | Clone selected repo (if not local); show local path (if already cloned) |
+| `↓` / `↑` | Navigate results while search is active |
+| `Backspace` | Delete last character in search query |
+| `Enter` | Commit search and act on selected repo |
+| `Esc` | Clear search and return to normal mode |
+
+### Repo Actions
+
+| Key | Action |
+|-----|--------|
 | `f` | `git fetch` the selected repo |
 | `F` | `git fetch` all locally cloned repos |
+| `m` | Update selected repo: stash changes, checkout default branch, pull latest |
+| `o` | Open selected repo on GitHub in the browser |
+| `t` | Open a terminal at the selected repo's local path |
+| `d` | Show the selected repo's description in a popup |
+
+### Display
+
+| Key | Action |
+|-----|--------|
 | `a` | Toggle visibility of archived repos |
+| `s` | Cycle sort field: Name → Last Updated → Name |
+| `S` | Toggle sort order: Ascending ↔ Descending |
 | `r` | Refresh repo list from GitHub API (bypasses cache) |
+
+### Dialogs & Popups
+
+| Key | Action |
+|-----|--------|
+| `Esc` | Dismiss clone progress dialog (clone continues in background) |
+| `Esc` / `Enter` | Dismiss failed-clone dialog |
+| Any key | Dismiss error or info popups |
+
+### Application
+
+| Key | Action |
+|-----|--------|
 | `q` | Quit |
 | `Ctrl+C` | Quit |
 
