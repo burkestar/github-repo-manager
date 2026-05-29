@@ -9,3 +9,4 @@
 .env.local
 *.log
 /tmp/
+.claude/settings.local.json
