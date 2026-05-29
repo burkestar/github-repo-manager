@@ -45,7 +45,7 @@ github_token = "ghp_your_token_here"
 workspace_root = "/Users/you/workspace"
 
 # Directory layout when cloning:
-#   "nested" → ~/workspace/datarobot/some-repo  (default)
+#   "nested" → ~/workspace/org-a/some-repo  (default)
 #   "flat"   → ~/workspace/some-repo
 layout = "nested"
 
@@ -56,9 +56,8 @@ cron_schedule = "0 0 5 * * *"
 
 # GitHub organizations to browse
 organizations = [
-    "datarobot",
-    "datarobot-community",
-    "datarobot-oss",
+    "org-a",
+    "org-b",
 ]
 ```
 
@@ -101,12 +100,12 @@ Logs are written to `~/.config/github-repo-manager/app.log` (never to the termin
 ```
  github-repo-manager   [Tab] switch  [/] search  [Enter] clone  [f] fetch  [F] fetch all  [r] refresh  [q] quit
 ┌────────────────────┬──────────────────────────────────────────────────────────────────────────────┐
-│ Organizations      │ [datarobot] 42 repos                                                         │
-│                    │ Search: [___________________]                                                 │
-│ ▶ datarobot        │                                                                              │
-│   datarobot-       │ ✓ some-repo                  (main) ↑2 ↓0                                   │
-│   community        │ ○ another-repo                                                               │
-│   datarobot-oss    │ ⊙ archived-repo [archived]                                                  │
+│ Organizations      │ [org-a] 42 repos                                                             │
+│                    │ Search: [___________________]                                                │
+│ ▶ org-a            │                                                                              │
+│   org-b            │ ✓ some-repo                  (main) ↑2 ↓0                                    │
+│                    │ ○ another-repo                                                               │
+│                    │ ⊙ archived-repo [archived]                                                   │
 │                    │ ○ yet-another-repo                                                           │
 │                    │                                                                              │
  ~/workspace  │  Last fetch: 2026-05-28 05:00

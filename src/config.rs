@@ -40,11 +40,7 @@ fn default_cron_schedule() -> String {
 }
 
 fn default_organizations() -> Vec<String> {
-    vec![
-        "datarobot".to_string(),
-        "datarobot-community".to_string(),
-        "datarobot-oss".to_string(),
-    ]
+    vec![]
 }
 
 impl Config {
@@ -58,7 +54,7 @@ impl Config {
                   workspace_root = \"{}\"\n\
                   layout = \"nested\"\n\
                   cron_schedule = \"0 0 5 * * *\"\n\
-                  organizations = [\"datarobot\", \"datarobot-community\", \"datarobot-oss\"]",
+                  organizations = [\"org-a\", \"org-b\"]",
                 config_path.display(),
                 default_workspace_root().display(),
             )));
