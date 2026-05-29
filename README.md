@@ -14,178 +14,29 @@ A terminal UI for browsing and managing GitHub repositories across multiple orga
 - Background scheduler that automatically fetches all local repos on a cron schedule
 - GitHub API response caching (1 hour TTL) to avoid rate limits
 
-## Prerequisites
+## Quick start
 
-- Rust (1.74+)
-- `libgit2` — on macOS: `brew install libgit2`
-- A GitHub personal access token (see [Creating a GitHub token](#creating-a-github-token) below)
-
-## Installation
+Install:
 
 ```bash
-git clone <this-repo>
-cd github-repo-manager
-cargo build --release
-# Binary will be at ./target/release/github-repo-manager
+cargo install --git <this-repo>
 ```
 
-## Configuration
+> [!NOTE]
+> Requires Rust. Installs to `~/.cargo/bin`
 
-The first time you run the app, it creates `~/.config/github-repo-manager/config.toml`
-with default values and exits. You only need to [create a GitHub access token](#creating-a-github-token),
-set `github_token` in that file, and run the app again.
-
-`~/.config/github-repo-manager/config.toml`:
-
-```toml
-# Required: GitHub personal access token
-github_token = "ghp_your_token_here"
-
-# Root directory where repos are cloned (default: ~/workspace)
-workspace_root = "/Users/you/workspace"
-
-# Directory layout when cloning:
-#   "nested" → ~/workspace/org-a/some-repo  (default)
-#   "flat"   → ~/workspace/some-repo
-layout = "nested"
-
-# Cron schedule for automatic git fetch of all local repos
-# Format: seconds minutes hours day-of-month month day-of-week
-# Default: daily at 5:00 AM
-cron_schedule = "0 0 5 * * *"
-
-# GitHub organizations to browse
-organizations = [
-    "org-a",
-    "org-b",
-]
-```
-
-## Creating a GitHub token
-
-The app needs a token that can list repositories (including private ones) for each configured organization.
-
-### Classic token (recommended for org access)
-
-1. Go to **github.com/settings/tokens** → **Generate new token (classic)**
-2. Set a descriptive name (e.g. `github-repo-manager`)
-3. Select the **`repo`** scope — this gives read/write access to code and metadata for all repos you have access to, including private ones
-4. Click **Generate token** and copy the value into `config.toml`
-
-> **Fine-grained tokens:** Select **All repositories** (or specific repos) and enable the **Contents** (read) and **Metadata** (read) permissions. Note that some GitHub organizations disable fine-grained token access by policy, in which case a classic token is required.
-
-### SSO authorization (required for SAML-protected organizations)
-
-If an organization enforces SAML SSO, API calls will be rejected even with a valid `repo`-scoped token unless the token has been explicitly SSO-authorized for that org. Symptoms: other orgs work fine but one specific org returns an error.
-
-To authorize:
-
-1. Go to **github.com/settings/tokens**
-2. Find your token and click **Configure SSO**
-3. Click **Authorize** next to each organization that requires SSO
-4. Press `r` in the TUI to refresh the repo list
-
-## Running
+Run:
 
 ```bash
-cargo run
-# or, after building:
-./target/release/github-repo-manager
+github-repo-manager
 ```
 
-Logs are written to `~/.config/github-repo-manager/app.log` (never to the terminal).
+> [!IMPORTANT]
+> On first run, creates default config at `~/.config/github-repo-manager/config.toml`.
+> Create your Github access token, update the config, and re-run the command.
 
-## UI Overview
 
-```
- github-repo-manager   [Tab] switch  [/] search  [Enter] clone  [f] fetch  [F] fetch all  [r] refresh  [q] quit
-┌────────────────────┬──────────────────────────────────────────────────────────────────────────────┐
-│ Organizations      │ [org-a] 42 repos                                                             │
-│                    │ Search: [___________________]                                                │
-│ ▶ org-a            │                                                                              │
-│   org-b            │ ✓ some-repo                  (main) ↑2 ↓0                                    │
-│                    │ ○ another-repo                                                               │
-│                    │ ⊙ archived-repo [archived]                                                   │
-│                    │ ○ yet-another-repo                                                           │
-│                    │                                                                              │
- ~/workspace  │  Last fetch: 2026-05-28 05:00
-```
+## Documentation
 
-**Repo indicators:**
-- `✓` green — cloned locally (shows current branch and ahead/behind counts)
-- `○` default — not yet cloned
-- `⊙` yellow — archived on GitHub
-
-## Key Bindings
-
-### Navigation
-
-| Key | Action |
-|-----|--------|
-| `Tab` | Switch focus between Organizations and Repositories panels |
-| `h` / `l` | Move focus left (Orgs) / right (Repos) |
-| `j` / `↓` | Move selection down |
-| `k` / `↑` | Move selection up |
-| `Enter` | Switch to Repos panel (from Orgs); clone selected repo or show local path (from Repos) |
-
-### Search
-
-| Key | Action |
-|-----|--------|
-| `/` | Activate fuzzy search in the Repos panel |
-| `↓` / `↑` | Navigate results while search is active |
-| `Backspace` | Delete last character in search query |
-| `Enter` | Commit search and act on selected repo |
-| `Esc` | Clear search and return to normal mode |
-
-### Repo Actions
-
-| Key | Action |
-|-----|--------|
-| `f` | `git fetch` the selected repo |
-| `F` | `git fetch` all locally cloned repos |
-| `m` | Update selected repo: stash changes, checkout default branch, pull latest |
-| `o` | Open selected repo on GitHub in the browser |
-| `t` | Open a terminal at the selected repo's local path |
-| `d` | Show the selected repo's description in a popup |
-
-### Display
-
-| Key | Action |
-|-----|--------|
-| `a` | Toggle visibility of archived repos |
-| `s` | Cycle sort field: Name → Last Updated → Name |
-| `S` | Toggle sort order: Ascending ↔ Descending |
-| `r` | Refresh repo list from GitHub API (bypasses cache) |
-
-### Dialogs & Popups
-
-| Key | Action |
-|-----|--------|
-| `Esc` | Dismiss clone progress dialog (clone continues in background) |
-| `Esc` / `Enter` | Dismiss failed-clone dialog |
-| Any key | Dismiss error or info popups |
-
-### Application
-
-| Key | Action |
-|-----|--------|
-| `q` | Quit |
-| `Ctrl+C` | Quit |
-
-## Background Fetch Scheduler
-
-The app runs a background job on the configured cron schedule to `git fetch` all repos found in your workspace. The default schedule is daily at 5:00 AM.
-
-To test with a more frequent interval, temporarily change your config:
-```toml
-cron_schedule = "*/15 * * * * *"  # every 15 seconds
-```
-
-The status bar shows the last fetch time and a `[fetching…]` indicator while a batch fetch is running.
-
-## Caching
-
-GitHub API responses are cached to disk at `~/.config/github-repo-manager/<org>.json` and expire after 1 hour. Press `r` to force a refresh from the API for the current organization.
-
-The local workspace scan result is also cached at `~/.config/github-repo-manager/workspace_cache.json` and refreshed on startup and after every clone or fetch.
+- **[User Guide](docs/user-guide.md)** — installation, GitHub token setup, configuration, UI overview, key bindings, background fetch scheduler, and caching.
+- **[Developer Guide](docs/developer-guide.md)** — prerequisites and building/running from source.
