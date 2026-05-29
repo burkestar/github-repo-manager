@@ -2,6 +2,8 @@
 
 A terminal UI for browsing and managing GitHub repositories across multiple organizations. Navigate repos, clone them into a local workspace, and keep everything up to date automatically.
 
+![](docs/screenshot.png)
+
 ## Features
 
 - Browse repositories across multiple GitHub organizations
