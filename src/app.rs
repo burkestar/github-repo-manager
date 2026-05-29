@@ -10,11 +10,15 @@ use tracing::{error, info};
 use crate::config::Config;
 use crate::error::Result;
 use crate::events::AppEvent;
-use crate::git::workspace::{load_workspace_cache, repo_target_path, save_workspace_cache, scan_workspace};
+use crate::git::workspace::{
+    load_workspace_cache, repo_target_path, save_workspace_cache, scan_workspace,
+};
 use crate::github::cache::RepoCache;
 use crate::github::client::fetch_org_repos;
 use crate::scheduler::start_scheduler;
-use crate::state::{AppState, CloneDialogState, CloneStage, PanelFocus, SortField, SortOrder, StatusLevel};
+use crate::state::{
+    AppState, CloneDialogState, CloneStage, PanelFocus, SortField, SortOrder, StatusLevel,
+};
 use crate::ui;
 
 pub struct App {
@@ -39,7 +43,10 @@ impl App {
 
     pub async fn run(mut self, mut terminal: ratatui::DefaultTerminal) -> Result<()> {
         self.state.checked_out = load_workspace_cache();
-        info!("Loaded {} repos from workspace cache", self.state.checked_out.len());
+        info!(
+            "Loaded {} repos from workspace cache",
+            self.state.checked_out.len()
+        );
 
         let fresh = scan_workspace(&self.state.config.workspace_root, &self.state.config.layout);
         info!("Found {} checked-out repos after scan", fresh.len());
@@ -146,7 +153,7 @@ impl App {
                         .map(|score| (i, score))
                 })
                 .collect();
-            scored.sort_by(|a, b| b.1.cmp(&a.1));
+            scored.sort_by_key(|b| std::cmp::Reverse(b.1));
             self.state.filtered_repos = scored.into_iter().map(|(i, _)| i).collect();
         }
 
@@ -229,12 +236,19 @@ impl App {
 
             KeyCode::Char('t') => {
                 if let Some(repo) = self.state.selected_repo().cloned() {
-                    match self.state.checked_out.get(&repo.full_name.to_lowercase()).cloned() {
-                        None => self.state.set_status(
-                            "Repo is not checked out locally",
-                            StatusLevel::Info,
-                        ),
-                        Some(checkout) => match open_terminal(&checkout.local_path, self.state.config.terminal.as_deref()) {
+                    match self
+                        .state
+                        .checked_out
+                        .get(&repo.full_name.to_lowercase())
+                        .cloned()
+                    {
+                        None => self
+                            .state
+                            .set_status("Repo is not checked out locally", StatusLevel::Info),
+                        Some(checkout) => match open_terminal(
+                            &checkout.local_path,
+                            self.state.config.terminal.as_deref(),
+                        ) {
                             Ok(()) => self.state.set_status(
                                 format!("Opening terminal at {}", checkout.local_path.display()),
                                 StatusLevel::Info,
@@ -252,8 +266,12 @@ impl App {
                 if let Some(repo) = self.state.selected_repo().cloned() {
                     let url = format!("https://github.com/{}", repo.full_name);
                     match open_browser(&url) {
-                        Ok(()) => self.state.set_status(format!("Opening {url}…"), StatusLevel::Info),
-                        Err(e) => self.state.set_status(format!("Failed to open browser: {e}"), StatusLevel::Error),
+                        Ok(()) => self
+                            .state
+                            .set_status(format!("Opening {url}…"), StatusLevel::Info),
+                        Err(e) => self
+                            .state
+                            .set_status(format!("Failed to open browser: {e}"), StatusLevel::Error),
                     }
                 }
             }
@@ -363,7 +381,11 @@ impl App {
             }
             PanelFocus::RepoPanel => {
                 if let Some(repo) = self.state.selected_repo().cloned() {
-                    if self.state.checked_out.contains_key(&repo.full_name.to_lowercase()) {
+                    if self
+                        .state
+                        .checked_out
+                        .contains_key(&repo.full_name.to_lowercase())
+                    {
                         let path = self.state.checked_out[&repo.full_name.to_lowercase()]
                             .local_path
                             .display()
@@ -441,7 +463,11 @@ impl App {
         if target.join(".git").exists() {
             self.state.clone_dialog = None;
             self.state.set_status(
-                format!("{} already checked out at {}", repo.full_name, target.display()),
+                format!(
+                    "{} already checked out at {}",
+                    repo.full_name,
+                    target.display()
+                ),
                 StatusLevel::Info,
             );
             self.state.checked_out =
@@ -516,7 +542,12 @@ impl App {
             Some(r) => r,
             None => return,
         };
-        let checkout = match self.state.checked_out.get(&repo.full_name.to_lowercase()).cloned() {
+        let checkout = match self
+            .state
+            .checked_out
+            .get(&repo.full_name.to_lowercase())
+            .cloned()
+        {
             Some(c) => c,
             None => {
                 self.state
@@ -561,7 +592,12 @@ impl App {
             Some(r) => r,
             None => return,
         };
-        let checkout = match self.state.checked_out.get(&repo.full_name.to_lowercase()).cloned() {
+        let checkout = match self
+            .state
+            .checked_out
+            .get(&repo.full_name.to_lowercase())
+            .cloned()
+        {
             Some(c) => c,
             None => {
                 self.state
@@ -583,7 +619,10 @@ impl App {
             .await;
             match result {
                 Ok(Ok(msg)) => {
-                    let _ = tx.send(AppEvent::UpMainCompleted { repo: repo_name, message: msg });
+                    let _ = tx.send(AppEvent::UpMainCompleted {
+                        repo: repo_name,
+                        message: msg,
+                    });
                 }
                 Ok(Err(e)) => {
                     let _ = tx.send(AppEvent::UpMainFailed {
@@ -725,8 +764,10 @@ impl App {
             }
 
             AppEvent::UpMainFailed { repo, error } => {
-                self.state
-                    .set_status(format!("upmain failed for {repo}: {error}"), StatusLevel::Error);
+                self.state.set_status(
+                    format!("upmain failed for {repo}: {error}"),
+                    StatusLevel::Error,
+                );
                 error!("upmain failed for {}: {}", repo, error);
             }
 
@@ -769,7 +810,8 @@ fn open_terminal(path: &std::path::Path, configured: Option<&str>) -> std::io::R
                 .spawn()?;
         }
         "linux" => {
-            let default = std::env::var("TERMINAL").unwrap_or_else(|_| "x-terminal-emulator".into());
+            let default =
+                std::env::var("TERMINAL").unwrap_or_else(|_| "x-terminal-emulator".into());
             let term = configured.unwrap_or(&default);
             std::process::Command::new(term)
                 .arg("--working-directory")
@@ -790,10 +832,12 @@ fn open_browser(url: &str) -> std::io::Result<()> {
     let browser = match std::env::consts::OS {
         "macos" => "open",
         "linux" => "xdg-open",
-        os => return Err(std::io::Error::new(
-            std::io::ErrorKind::Unsupported,
-            format!("unsupported OS: {os}"),
-        )),
+        os => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Unsupported,
+                format!("unsupported OS: {os}"),
+            ))
+        }
     };
     std::process::Command::new(browser).arg(url).spawn()?;
     Ok(())

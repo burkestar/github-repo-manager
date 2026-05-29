@@ -10,7 +10,11 @@ pub fn render_info(frame: &mut Frame, title: &str, body: &str) {
 
     let block = Block::default()
         .title(format!(" {title} "))
-        .title_style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        .title_style(
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Cyan));
 

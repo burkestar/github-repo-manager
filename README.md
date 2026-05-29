@@ -19,8 +19,14 @@ A terminal UI for browsing and managing GitHub repositories across multiple orga
 Install:
 
 ```bash
-cargo install --git <this-repo>
+# From crates.io (recommended)
+cargo install github-repo-manager
+
+# …or the latest from git
+cargo install --git https://github.com/burkestar/github-repo-manager
 ```
+
+Prebuilt binaries for macOS, Linux, and Windows are also attached to each [GitHub Release](https://github.com/burkestar/github-repo-manager/releases).
 
 > [!NOTE]
 > Requires Rust. Installs to `~/.cargo/bin`

@@ -5,8 +5,14 @@ How to install, configure, and use github-repo-manager.
 ## 1. Install
 
 ```bash
-cargo install --git <this-repo>   # requires Rust; installs to ~/.cargo/bin
+# From crates.io (recommended) — requires Rust; installs to ~/.cargo/bin
+cargo install github-repo-manager
+
+# …or the latest from git
+cargo install --git https://github.com/burkestar/github-repo-manager
 ```
+
+Prebuilt binaries for macOS, Linux, and Windows are attached to each [GitHub Release](https://github.com/burkestar/github-repo-manager/releases) if you'd rather not compile from source.
 
 ## 2. Create a GitHub access token
 

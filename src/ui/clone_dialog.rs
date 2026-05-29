@@ -55,13 +55,9 @@ fn render_progress(frame: &mut Frame, area: Rect, state: &CloneDialogState, prog
     frame.render_widget(gauge, gauge_area);
 }
 
-
 fn render_error(frame: &mut Frame, area: Rect, err: &str) {
-    let [msg_area, footer_area] = Layout::vertical([
-        Constraint::Fill(1),
-        Constraint::Length(1),
-    ])
-    .areas(area);
+    let [msg_area, footer_area] =
+        Layout::vertical([Constraint::Fill(1), Constraint::Length(1)]).areas(area);
 
     let text = format!("  ✗ {err}");
     let para = Paragraph::new(text)

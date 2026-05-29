@@ -49,7 +49,12 @@ pub async fn fetch_org_repos(org: &str, token: &str) -> Result<Vec<RepoInfo>> {
         .user()
         .await
         .map(|u| u.login)
-        .map_err(|e| warn!("could not fetch authenticated user: {}", github_error_message(&e)))
+        .map_err(|e| {
+            warn!(
+                "could not fetch authenticated user: {}",
+                github_error_message(&e)
+            )
+        })
         .ok();
     let is_self = authed_login
         .as_deref()
@@ -93,11 +98,19 @@ pub async fn fetch_org_repos(org: &str, token: &str) -> Result<Vec<RepoInfo>> {
                 // The org listing 404s when "org" is really a user account.
                 // Retry against the appropriate user endpoint.
                 if route == Route::Org && gh_message == "Not Found" {
-                    route = if is_self { Route::AuthedUser } else { Route::OtherUser };
+                    route = if is_self {
+                        Route::AuthedUser
+                    } else {
+                        Route::OtherUser
+                    };
                     info!(
                         "'{}' is not an org, retrying as {} account",
                         org,
-                        if is_self { "authenticated user" } else { "user" }
+                        if is_self {
+                            "authenticated user"
+                        } else {
+                            "user"
+                        }
                     );
                     continue;
                 }
@@ -135,7 +148,7 @@ pub async fn fetch_org_repos(org: &str, token: &str) -> Result<Vec<RepoInfo>> {
         page += 1;
     }
 
-    all_repos.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    all_repos.sort_by_key(|a| a.name.to_lowercase());
 
     info!("Fetched {} repos total for org '{}'", all_repos.len(), org);
     if all_repos.len() < 100 {

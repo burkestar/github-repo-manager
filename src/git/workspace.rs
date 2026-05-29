@@ -120,7 +120,7 @@ fn extract_full_name_from_url(url: &str) -> Option<String> {
     }
     // SSH: git@github.com:org/repo
     if url.starts_with("git@") {
-        if let Some(path) = url.splitn(2, ':').nth(1) {
+        if let Some(path) = url.split_once(':').map(|x| x.1) {
             let parts: Vec<&str> = path.splitn(2, '/').collect();
             if parts.len() == 2 {
                 return Some(format!("{}/{}", parts[0], parts[1]));

@@ -1,0 +1,30 @@
+# Custom dist publish job: publishes the crate to crates.io.
+#
+# dist invokes this reusable workflow during the `publish` stage of the Release
+# workflow (after binaries are built and the GitHub Release is created) because
+# it is listed in `publish-jobs` in dist-workspace.toml. dist passes the release
+# `plan` manifest as an input and calls it with `secrets: inherit`, so it can
+# read the CARGO_REGISTRY_TOKEN repository secret.
+name: Publish to crates.io
+
+on:
+  workflow_call:
+    inputs:
+      plan:
+        required: true
+        type: string
+
+jobs:
+  publish-crate:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          submodules: recursive
+      - name: Install Rust
+        run: rustup toolchain install stable --profile minimal --no-self-update
+      - name: Publish to crates.io
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish --locked

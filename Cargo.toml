@@ -2,6 +2,15 @@
 name = "github-repo-manager"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.74"
+description = "A terminal UI for browsing and managing GitHub repositories across multiple organizations."
+license = "Apache-2.0"
+repository = "https://github.com/burkestar/github-repo-manager"
+homepage = "https://github.com/burkestar/github-repo-manager"
+readme = "README.md"
+keywords = ["github", "tui", "git", "cli", "ratatui"]
+categories = ["command-line-utilities", "development-tools"]
+exclude = ["docs/screenshot.png"]
 
 [dependencies]
 ratatui = { version = "0.29", features = ["crossterm"] }
@@ -12,7 +21,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 toml = "0.8"
 dirs = "5"
-git2 = "0.20"
+git2 = { version = "0.20", features = ["vendored-libgit2", "vendored-openssl"] }
 fuzzy-matcher = "0.3"
 tokio-cron-scheduler = "0.13"
 chrono = { version = "0.4", features = ["serde"] }
@@ -22,3 +31,8 @@ tracing-appender = "0.2"
 thiserror = "2"
 lru = "0.12"
 futures = "0.3"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"

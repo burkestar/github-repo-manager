@@ -51,10 +51,16 @@ pub fn upmain(repo_path: &Path, token: &str, default_branch: &str) -> Result<Str
     let fetch_commit = repo.reference_to_annotated_commit(&fetch_head)?;
     let (analysis, _) = repo.merge_analysis(&[&fetch_commit])?;
 
-    let stash_note = if stashed { ", stashed local changes" } else { "" };
+    let stash_note = if stashed {
+        ", stashed local changes"
+    } else {
+        ""
+    };
 
     if analysis.is_up_to_date() {
-        return Ok(format!("Already up to date on '{default_branch}'{stash_note}"));
+        return Ok(format!(
+            "Already up to date on '{default_branch}'{stash_note}"
+        ));
     }
 
     if !analysis.is_fast_forward() {

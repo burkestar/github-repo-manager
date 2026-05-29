@@ -19,7 +19,11 @@ pub fn render(frame: &mut Frame, area: Rect, state: &mut AppState) {
     let total = state.current_repos().len();
     let filtered = state.filtered_repos.len();
 
-    let archived_note = if !state.show_archived { " [archived hidden]" } else { "" };
+    let archived_note = if !state.show_archived {
+        " [archived hidden]"
+    } else {
+        ""
+    };
     let sort_indicator = match (&state.sort_field, &state.sort_order) {
         (SortField::Name, SortOrder::Asc) => " ↑name",
         (SortField::Name, SortOrder::Desc) => " ↓name",
