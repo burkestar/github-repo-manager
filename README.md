@@ -29,11 +29,9 @@ cargo build --release
 
 ## Configuration
 
-Create the config file before running:
-
-```bash
-mkdir -p ~/.config/github-repo-manager
-```
+The first time you run the app, it creates `~/.config/github-repo-manager/config.toml`
+with default values and exits. You only need to [create a GitHub access token](#creating-a-github-token),
+set `github_token` in that file, and run the app again.
 
 `~/.config/github-repo-manager/config.toml`:
 
