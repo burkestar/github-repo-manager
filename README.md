@@ -35,6 +35,16 @@ github-repo-manager
 > On first run, creates default config at `~/.config/github-repo-manager/config.toml`.
 > Create your Github access token, update the config, and re-run the command.
 
+Try:
+
+- `Tab` to navigate between panes for selecting Organizations or Repositories.
+- `↓` and `↑` to navigate
+- `Enter` to clone the selected repo
+- `f` to git fetch the selected repo
+- `m` to move to latest code on main branch for selected repo
+- `t` to open a terminal for the selected repo
+- `o` to open the selected github repo in the browser
+- `q` to quit
 
 ## Documentation
 
