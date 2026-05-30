@@ -19,7 +19,7 @@ octocrab = "0.41"
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-toml = "0.8"
+toml = "1.1"
 dirs = "6"
 git2 = { version = "0.20", features = ["vendored-libgit2", "vendored-openssl"] }
 fuzzy-matcher = "0.3"
