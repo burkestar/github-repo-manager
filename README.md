@@ -4,6 +4,10 @@ A terminal UI for browsing and managing GitHub repositories across multiple orga
 
 ![](docs/screenshot.png)
 
+> [!WARNING]  
+> This repository was vibecoded using Claude Code and should be considered ALPHA quality.
+> No test coverage, no agent harness, no automated tests or guardrails.
+
 ## Features
 
 - Browse repositories across multiple GitHub organizations
